@@ -1,0 +1,60 @@
+//@version=5
+strategy("Rohit CCI Strategy", shorttitle="RohitCCIS", overlay=true, default_qty_type=strategy.percent_of_equity, default_qty_value=100)
+
+length = input.int(20, minval=1)
+src = input(hlc3, title="Source")
+ma = ta.sma(src, length)
+cci = (src - ma) / (0.015 * ta.dev(src, length))
+
+// Input parameters for strategy
+buy_threshold = input(-100, title="Buy Threshold")
+sell_threshold = input(100, title="Sell Threshold")
+use_stop_loss = input(true, title="Use Stop Loss")
+stop_loss_threshold = input(-100, title="Stop Loss Threshold")
+use_percent_stop_loss = input(false, title="Use Percent Stop Loss")
+percent_stop_loss = input.int(25, title="Percent Stop Loss", minval=1, maxval=100)
+skip_sell_no_profit = input(true, title="Skip Sell if No Profit")
+
+// Calendar input for start date with default set to 2011-01-01
+start_date_input = input.time(timestamp("2011-01-01T00:00"), title="Backtest Start Date")
+
+// Buy condition
+buy_condition = ta.crossover(cci, buy_threshold)
+
+// Sell condition
+sell_condition = ta.crossunder(cci, sell_threshold)
+
+// Stop loss condition based on fixed threshold
+stop_loss_condition = use_stop_loss ? ta.crossunder(cci, stop_loss_threshold) : na
+
+// Stop loss condition based on percentage
+percent_stop_loss_condition = use_percent_stop_loss ? close < strategy.position_avg_price * (1 - percent_stop_loss / 100) : na
+
+// Check for existing long position before selling
+should_sell = strategy.position_size > 0 and (sell_condition or stop_loss_condition or percent_stop_loss_condition)
+
+// Check for existing long position before buying
+should_buy = strategy.position_size == 0 and buy_condition
+
+// Filter conditions based on start date
+start_date_filter = time >= start_date_input
+
+// Calculate profit percentage
+profit_percent = strategy.position_size > 0 ? (close - strategy.position_avg_price) / strategy.position_avg_price * 100 : na
+
+// Plotting CCI for reference
+plot(cci, "CCI", color=#2962FF, display=display.none)
+
+// Plotting buy and sell signals
+plotshape(series=should_buy and start_date_filter, title="Buy Signal", color=color.green, style=shape.triangleup, size=size.small)
+plotshape(series=should_sell and start_date_filter, title="Sell Signal", color=color.red, style=shape.triangledown, size=size.small)
+
+// Strategy logic
+if (should_buy and start_date_filter)
+    strategy.entry("Buy", strategy.long)
+
+if (should_sell and start_date_filter)
+    if (skip_sell_no_profit)
+        strategy.close("Buy", when=profit_percent >= 0 or na(profit_percent))
+    else
+        strategy.close("Buy")
