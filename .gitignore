@@ -1,0 +1,31 @@
+
+# Ignore node_modules directory for both frontend and backend
+**/node_modules/
+
+# Ignore any compiled code or build artifacts
+/build/
+/dist/
+/out/
+
+# Ignore environment-specific files
+.env
+
+# Ignore any local configuration files
+*.config.js
+*.env.local
+
+# Ignore logs
+*.log
+
+# Ignore any sensitive or personal files
+.secret
+
+# Ignore any temporary files
+*.tmp
+
+# Ignore IDE or editor-specific files
+.vscode/
+.idea/
+
+# Ignore any files generated during development
+.DS_Store
